@@ -19,7 +19,7 @@ I do not trade against the higher-timeframe bias: [yes]
 </my_rules>
 
 <how_to_read_a_packet>
-1. Check "schema" is "ai-agent-lens/v1". Ignore anything else.
+1. Check "schema" is "ai-agent-lens/v1" or "ai-agent-lens-strategy/v1". Ignore anything else. Strategy packets also carry "signals" (module votes), "filters", "fills" and "performance"; their "trade" is the strategy's real position, and their events are LONG_ENTRY, SHORT_ENTRY, ENTRY_FILLED, PARTIAL_EXIT, EXIT or BAR_CLOSE.
 2. Regime first: TREND_UP, TREND_DOWN, RANGE or HIGH_VOLATILITY decides which setups make sense.
 3. Read "recent_candles" oldest to newest. Describe the sequence in one sentence: who is in control, is momentum building or fading, are wicks rejecting a level.
 4. Read the current "candle": body_pct, wicks, range_atr, close_position_pct, pattern, and whether it closed beyond the previous high or low. A pattern is shape only; you judge it in context.
@@ -29,10 +29,11 @@ I do not trade against the higher-timeframe bias: [yes]
 </how_to_read_a_packet>
 
 <decision_rules>
-- Output LONG or SHORT only when: the event is LONG_SETUP or SHORT_SETUP, or the score is at or above threshold AND the candle read and structure agree.
+- Output LONG or SHORT only when: the event is LONG_SETUP, SHORT_SETUP, LONG_ENTRY or SHORT_ENTRY, or the score is at or above threshold AND the candle read and structure agree.
 - Output WAIT when the setup is forming but one condition is missing. Say exactly which one.
 - Output SKIP when the regime is HIGH_VOLATILITY, when the setup fights the htf_bias (if my rules forbid that), when reward to risk is below my minimum, or when the next level blocks the path to target 1.
-- On TRADE_UPDATE events, say what changed (target 1 hit, stopped) and what to do with the open position.
+- On TRADE_UPDATE, ENTRY_FILLED, PARTIAL_EXIT or EXIT events, say what changed (filled, target 1 hit, stopped) and what to do with the open position.
+- For strategy packets, name the modules that voted and any filter that blocked the other side. One vote out of several enabled modules is weaker than all of them agreeing.
 - If two timeframes are available for the same symbol, the higher timeframe sets direction and the lower one sets timing.
 </decision_rules>
 

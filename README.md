@@ -10,6 +10,17 @@ Open source · MIT license · Pine Script v6 · No repainting
 
 ---
 
+## Two versions
+
+| File | Type | Use it when |
+|---|---|---|
+| [ai-agent-lens.pine](ai-agent-lens.pine) | Indicator | You want the chart readout and one JSON packet per candle for your agent |
+| [ai-agent-lens-strategy.pine](ai-agent-lens-strategy.pine) | **Strategy with alerts** | You also want backtests in the Strategy Tester, real entry/stop/target orders, order-fill alerts for a bot, and **pluggable signal modules** you can extend |
+
+The strategy keeps everything the indicator sends and adds votes from its signal modules, filters, fills and performance to the packet. Adding a new entry idea is three lines in marked spots; nothing else changes. Full guide: [docs/STRATEGY.md](docs/STRATEGY.md) (Persian summary: [docs/STRATEGY.fa.md](docs/STRATEGY.fa.md)).
+
+---
+
 ## What your agent receives on every candle
 
 One JSON packet per closed candle with everything a trader looks at:
@@ -131,6 +142,18 @@ Point the webhook at your server. The body is plain JSON with the schema `ai-age
 
 ---
 
+### Using the strategy instead
+
+1. Paste [ai-agent-lens-strategy.pine](ai-agent-lens-strategy.pine) into the Pine Editor, **Save**, **Add to chart**. Open the **Strategy Tester** tab to see the backtest.
+2. Pick your entry ideas in **Settings → Inputs → Signal modules** (score, structure break, EMA cross, RSI pullback) and how they vote (Any, All, At least N). Add filters (regime, volatility, higher timeframe, session).
+3. Create one alert:
+   - for an **AI agent**: condition `AI Agent Lens Strategy` → `alert() function calls only`, webhook URL of your agent, message unchanged;
+   - for an **execution bot**: condition `Order fills only`, message exactly `{{strategy.order.alert_message}}`.
+
+The same receiver handles both: packets go to `packets/latest.json`, order messages to `packets/orders.jsonl`. Schemas: [docs/PACKET_SCHEMA.md](docs/PACKET_SCHEMA.md#strategy-packet-ai-agent-lens-strategyv1).
+
+---
+
 ## What a signal looks like
 
 Example output from the agent prompt ([examples/sample_signal.json](examples/sample_signal.json)):
@@ -236,7 +259,10 @@ Yes. The indicator, panel and Data Window all work. Sending packets to an agent 
 One per closed candle per chart. A 1h chart sends 24 a day. Switch "Send JSON packet" to "Setups and trade updates" to receive only the important ones.
 
 **Does it place trades?**
-No. It produces data and signals. Your agent can be connected to a broker if you choose, but this repository never places orders.
+No. The indicator produces data and signals. The strategy places orders only inside TradingView's backtester; a real broker sees nothing unless you create an order-fill alert and connect it to your own bot.
+
+**How do I add my own entry rule?**
+Use the strategy and follow [docs/STRATEGY.md, section 6](docs/STRATEGY.md#6-add-your-own-module): one toggle input, one condition, one registry line. Then run `python3 -m unittest discover -s tests` and compile it in the Pine Editor.
 
 ---
 
@@ -245,12 +271,17 @@ No. It produces data and signals. Your agent can be connected to a broker if you
 ```
 tradingview-indicator-for-ai-agents/
 ├── ai-agent-lens.pine           the indicator (Pine Script v6)
+├── ai-agent-lens-strategy.pine  the strategy with alerts and signal modules
 ├── agent/AGENT_PROMPT.md        system prompt for your AI agent
 ├── docs/SPECIFICATION.md        every calculation and rule
-├── docs/PACKET_SCHEMA.md        every field in the JSON packet
+├── docs/PACKET_SCHEMA.md        every field in the JSON packets
+├── docs/STRATEGY.md             strategy rules, alerts, how to add modules and filters
 ├── examples/webhook_receiver.py receive packets locally (Python 3, no installs)
 ├── examples/sample_packet.json  example packet
 ├── examples/sample_signal.json  example agent signal
+├── examples/sample_strategy_packet.json  example strategy packet
+├── examples/sample_order.json   example order-fill message
+├── tests/                       python3 -m unittest discover -s tests
 └── LICENSE                      MIT
 ```
 
