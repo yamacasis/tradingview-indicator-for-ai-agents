@@ -2,7 +2,7 @@
 
 Version 1.0 · Pine Script v6 · Packet schema `ai-agent-lens/v1`
 
-This document describes exactly what the indicator calculates, so a person or an AI agent can verify every number it produces.
+This document describes exactly what the indicator calculates, so a person or an AI agent can verify every number it produces. The strategy version uses the same calculations; its modules, filters, orders and alerts are described in [STRATEGY.md](STRATEGY.md).
 
 ---
 

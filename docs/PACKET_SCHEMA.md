@@ -114,3 +114,96 @@ Full example: [`examples/sample_packet.json`](../examples/sample_packet.json)
 ## Versioning
 
 Breaking changes will use a new schema name (`ai-agent-lens/v2`). Agents should check `schema` before reading a packet.
+
+---
+
+# Strategy packet: `ai-agent-lens-strategy/v1`
+
+Sent by [`ai-agent-lens-strategy.pine`](../ai-agent-lens-strategy.pine) through `alert()` once per closed candle, or only on trade events (input "Send JSON packet"). Example: [`examples/sample_strategy_packet.json`](../examples/sample_strategy_packet.json)
+
+It contains every field of `ai-agent-lens/v1` above (`candle`, `recent_candles`, `regime`, `trend`, `momentum`, `strength`, `volatility`, `volume`, `structure`, `levels`, `scores`, `last_setup`), with these differences and additions.
+
+## Top level
+
+| Field | Type | Description |
+|---|---|---|
+| `schema` | string | Always `"ai-agent-lens-strategy/v1"` |
+| `tag` | string | Optional. The "Bot / account tag" input, only present when it is set |
+| `event` | enum | `BAR_CLOSE`, `LONG_ENTRY`, `SHORT_ENTRY` (signal on this candle, order goes out at the next open), `ENTRY_FILLED`, `PARTIAL_EXIT` (target 1), `EXIT` (position closed) |
+| `state_code` | string | `LENS-S\|TICKER\|TF\|REGIME\|L<long>\|S<short>\|V<long votes>/<short votes>\|SIDE:STATUS` |
+| `signals` | object | Votes of the signal modules |
+| `filters` | object | Which sides the filters allow |
+| `trade` | object | The strategy's real position |
+| `fills` | array | Fills that happened on this candle (empty on most candles) |
+| `performance` | object | Strategy Tester numbers at this candle |
+
+## `signals`
+
+| Field | Type | Description |
+|---|---|---|
+| `signals.combine` | enum | `Any`, `All`, `At least N` |
+| `signals.enabled` | int | Number of enabled modules |
+| `signals.votes_needed` | int | Votes a side needs |
+| `signals.long_votes`, `signals.short_votes` | int | Enabled modules agreeing with each side |
+| `signals.modules[]` | array | One item per registered module: `name`, `enabled` (bool), `long` (bool), `short` (bool). Disabled modules are listed too, with their raw state, so an agent can see what they would say |
+
+## `filters`
+
+| Field | Type | Description |
+|---|---|---|
+| `filters.long_ok`, `filters.short_ok` | bool | All enabled filters allow that side |
+| `filters.items[]` | array | One item per filter: `name`, `enabled`, `allow_long`, `allow_short` |
+
+## `trade` (strategy version)
+
+| Field | Type | Description |
+|---|---|---|
+| `trade.side` | enum | `LONG`, `SHORT`, `FLAT` (the live position) |
+| `trade.status` | enum | `NONE`, `PENDING` (signal sent, not filled yet), `ACTIVE`, `TARGET_1_HIT`, `TARGET_2_HIT`, `STOPPED`, `STOPPED_AFTER_T1`, `BREAKEVEN_AFTER_T1`, `TIME_EXIT`, `REVERSED` |
+| `trade.entry` | number or null | Average fill price while open, otherwise the reference price of the last signal |
+| `trade.stop` | number or null | Current stop (moves to entry after target 1 when breakeven is on) |
+| `trade.target_1`, `trade.target_2` | number or null | Targets of the last signal |
+| `trade.qty` | number | Open position size in units, 0 when flat |
+| `trade.bars_since_entry` | int or null | Bars since the fill |
+
+## `fills[]`
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | enum | `ENTRY`, `PARTIAL_EXIT`, `EXIT` |
+| `side` | enum | `LONG`, `SHORT` |
+| `price` | number | `ENTRY` only: average fill price |
+| `reason` | enum | Exits only: `T1`, `T2`, `SL`, `BE`, `TIME`, `REVERSE` |
+| `entry_price`, `exit_price` | number | Exits only |
+| `qty` | number | Units filled |
+| `profit` | number | Exits only: profit of that piece in account currency |
+
+## `performance`
+
+| Field | Type | Description |
+|---|---|---|
+| `performance.equity` | number | Strategy equity |
+| `performance.net_profit` | number | Closed profit |
+| `performance.open_profit` | number | Unrealized profit |
+| `performance.closed_trades` | int | Closed trades. A partial exit counts as one |
+| `performance.win_rate_pct` | number or null | Winning closed trades, % |
+| `performance.max_drawdown` | number | Maximum drawdown so far |
+
+---
+
+# Order message: `ai-agent-lens-order/v1`
+
+A compact message attached to every strategy order. TradingView sends it when the order **fills**, if the alert's message is exactly `{{strategy.order.alert_message}}`. Use it for execution bots. Example: [`examples/sample_order.json`](../examples/sample_order.json)
+
+| Field | Type | Description |
+|---|---|---|
+| `schema` | string | Always `"ai-agent-lens-order/v1"` |
+| `tag` | string | Optional, same as above |
+| `action` | enum | `OPEN_LONG`, `OPEN_SHORT`, `CLOSE_LONG`, `CLOSE_SHORT` |
+| `reason` | enum | `SIGNAL` for entries; `T1`, `T2`, `SL`, `BE`, `TIME` for exits |
+| `order_id` | string | `Long`, `Short`, `Long T1`, `Long T2`, `Short T1`, `Short T2`, `ALL` |
+| `symbol`, `timeframe` | string | As above |
+| `time` | string | Close time of the candle that created the order, ISO 8601 UTC |
+| `price_ref` | number | Close of that candle. The real fill price can differ |
+| `qty` | number | Units this order is meant to fill |
+| `stop`, `target_1`, `target_2` | number | Levels of the trade |

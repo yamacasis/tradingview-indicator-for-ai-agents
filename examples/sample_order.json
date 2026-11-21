@@ -1,0 +1,14 @@
+{
+  "schema": "ai-agent-lens-order/v1",
+  "action": "OPEN_LONG",
+  "reason": "SIGNAL",
+  "order_id": "Long",
+  "symbol": "BINANCE:HYPEUSDT.P",
+  "timeframe": "60",
+  "time": "2026-11-13T09:00:00Z",
+  "price_ref": 70.71,
+  "qty": 12.07,
+  "stop": 69.882,
+  "target_1": 71.952,
+  "target_2": 73.194
+}
